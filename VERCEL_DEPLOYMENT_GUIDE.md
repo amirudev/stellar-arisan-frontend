@@ -60,10 +60,11 @@ VITE_ANALYTICS_ID=your_analytics_id_here
 
 The following files have been created for Vercel deployment:
 
-- `vercel.json` - Vercel configuration for React Router SSR
-- `api/index.js` - Serverless function entry point
+- `api/index.js` - Serverless function entry point for React Router SSR
 - `.vercelignore` - Files to exclude from deployment
 - `vercel-env.example` - Environment variables template
+
+**Note**: No `vercel.json` is needed - Vercel will auto-detect the project settings.
 
 ## How It Works
 

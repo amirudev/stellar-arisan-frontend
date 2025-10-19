@@ -8,15 +8,22 @@ export default async function handler(req, res) {
     
     const handleRequest = createRequestHandler({
       build,
-      mode: process.env.NODE_ENV,
+      mode: process.env.NODE_ENV || "production",
     });
     
     return handleRequest(req, res);
   } catch (error) {
-    console.error("Failed to import server build:", error);
+    console.error("Server error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
+    
     res.status(500).json({ 
-      error: "Server build not available. Make sure to run 'npm run build' before deployment.",
-      details: error.message
+      error: "Internal server error",
+      message: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 }
