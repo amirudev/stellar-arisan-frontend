@@ -1,26 +1,17 @@
 {
   "version": 2,
   "builds": [
+    { "src": "build/client/**", "use": "@vercel/static" },
     {
-      "src": "package.json",
+      "src": "build/server/index.js",
       "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["build/**"],
-        "maxDuration": 30
-      }
+      "config": { "maxDuration": 30 }
     }
   ],
   "routes": [
-    {
-      "src": "/build/(.*)",
-      "dest": "/build/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/build/server/index.js"
-    }
+    { "src": "/assets/(.*)", "dest": "build/client/assets/$1" },
+    { "src": "/favicon.ico", "dest": "build/client/favicon.ico" },
+    { "src": "/(.*)", "dest": "build/server/index.js" }
   ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "env": { "NODE_ENV": "production" }
 }
