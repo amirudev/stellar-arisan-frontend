@@ -1,6 +1,6 @@
 # Vercel Deployment Guide for Arisan OC Frontend
 
-This guide will help you deploy the Arisan OC frontend to Vercel.
+This guide will help you deploy the Arisan OC frontend to Vercel using React Router v7 with SSR.
 
 ## Prerequisites
 
@@ -23,11 +23,13 @@ Ensure your code is pushed to a Git repository (GitHub, GitLab, or Bitbucket).
 
 ### 3. Configure Build Settings
 
-Vercel should automatically detect the following settings:
+In your Vercel project settings, configure:
+
 - **Framework Preset**: Other
 - **Build Command**: `npm run build`
 - **Output Directory**: `build`
 - **Install Command**: `npm install`
+- **Node.js Version**: 18.x
 
 ### 4. Set Environment Variables
 
@@ -58,9 +60,17 @@ VITE_ANALYTICS_ID=your_analytics_id_here
 
 The following files have been created for Vercel deployment:
 
-- `vercel.json` - Vercel configuration
+- `vercel.json` - Vercel configuration for React Router SSR
+- `api/index.js` - Serverless function entry point
 - `.vercelignore` - Files to exclude from deployment
 - `vercel-env.example` - Environment variables template
+
+## How It Works
+
+1. **Build Process**: Vercel runs `npm run build` which creates the `build/` directory
+2. **API Route**: The `api/index.js` file imports the built server and creates a request handler
+3. **Routing**: Static assets are served from `build/client/`, all other requests go to the SSR server
+4. **SSR**: React Router handles server-side rendering for all routes
 
 ## Troubleshooting
 
@@ -80,13 +90,20 @@ If the app doesn't work after deployment:
 1. **Environment Variables**: Double-check all VITE_* variables are set correctly
 2. **Network Configuration**: Verify RPC URL and network settings
 3. **Contract ID**: Ensure the contract ID matches your deployed contract
+4. **API Route**: Check that `api/index.js` is properly importing the built server
 
-### Performance Optimization
+### Common Issues
+
+1. **404 Errors**: Usually means the build didn't complete or the API route isn't working
+2. **Import Errors**: Make sure the build directory exists and contains the server files
+3. **Environment Variables**: Ensure all VITE_* variables are set in Vercel project settings
+
+## Performance Optimization
 
 For better performance:
 
-1. **Enable Edge Functions**: Consider using Vercel Edge Functions for better global performance
-2. **Caching**: Configure appropriate cache headers in `vercel.json`
+1. **Edge Functions**: Consider using Vercel Edge Functions for better global performance
+2. **Caching**: Configure appropriate cache headers
 3. **CDN**: Vercel automatically provides global CDN
 
 ## Custom Domain (Optional)

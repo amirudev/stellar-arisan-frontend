@@ -1,25 +1,19 @@
 {
   "version": 2,
-  "functions": {
-    "build/server/index.js": {
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     {
-      "src": "/assets/(.*)",
-      "dest": "/build/client/assets/$1"
-    },
-    {
-      "src": "/favicon.ico", 
-      "dest": "/build/client/favicon.ico"
+      "src": "/build/client/(.*)",
+      "dest": "/build/client/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/build/server/index.js"
+      "dest": "/api/index.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
