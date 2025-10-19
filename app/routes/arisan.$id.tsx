@@ -71,18 +71,38 @@ export default function ArisanDetail() {
 
         setArisan(arisanData);
 
-        // Get current round
-        const currentRoundNum = await sorobanUtils.getCurrentRound(arisanId);
-        console.log('Current round from contract:', currentRoundNum);
-        setCurrentRound(currentRoundNum);
-
-        // Check payment status for current round
-        const hasPaid = await sorobanUtils.getPaymentStatus(arisanId, currentRoundNum);
-        console.log('Payment status for round', currentRoundNum, ':', hasPaid);
+        // Check payment status for each round to find the next unpaid round
+        let nextUnpaidRound = 1;
+        let hasPaid = false;
+        let allRoundsPaid = true;
+        
+        for (let round = 1; round <= arisanData.roundCount; round++) {
+          const roundPaid = await sorobanUtils.getPaymentStatus(arisanId, round);
+          console.log(`Round ${round} payment status:`, roundPaid);
+          if (!roundPaid) {
+            nextUnpaidRound = round;
+            hasPaid = false;
+            allRoundsPaid = false;
+            break;
+          } else {
+            hasPaid = true;
+          }
+        }
+        
+        // If all rounds are paid, set nextUnpaidRound beyond the total rounds
+        if (allRoundsPaid) {
+          nextUnpaidRound = arisanData.roundCount + 1;
+        }
+        
+        console.log('Next unpaid round:', nextUnpaidRound);
+        console.log('Has paid for any round:', hasPaid);
+        console.log('All rounds paid:', allRoundsPaid);
+        console.log('Setting current round to:', nextUnpaidRound);
+        setCurrentRound(nextUnpaidRound);
         setPaymentStatus(hasPaid);
 
         // Check if there's a winner for current round
-        const winnerData = await sorobanUtils.getWinner(arisanId, currentRoundNum);
+        const winnerData = await sorobanUtils.getWinner(arisanId, nextUnpaidRound);
         setWinner(winnerData);
 
       } catch (error) {
@@ -123,14 +143,33 @@ export default function ArisanDetail() {
         return;
       }
 
+      console.log('About to check payment status for round:', currentRound);
+      console.log('Arisan round count:', arisan.roundCount);
+      
       // Check if user has already paid for this round
       const hasPaid = await sorobanUtils.getPaymentStatus(arisanId, currentRound);
+      console.log('Payment status for round', currentRound, ':', hasPaid);
       if (hasPaid) {
         toast.error('Anda sudah membayar untuk round ini');
         return;
       }
+      
+      // Check if currentRound is beyond the total rounds (all rounds paid)
+      if (currentRound > arisan.roundCount) {
+        toast.error('Semua putaran sudah dibayar. Tidak ada pembayaran yang diperlukan.');
+        console.log('BLOCKED: Attempted to pay when all rounds are already paid');
+        return;
+      }
 
-      const sourceAccount = await rpc.getAccount(walletState.publicKey);
+      let sourceAccount;
+      try {
+        sourceAccount = await rpc.getAccount(walletState.publicKey);
+        console.log('Source account retrieved:', sourceAccount);
+      } catch (error) {
+        console.error('Error getting source account:', error);
+        toast.error('Failed to get account information');
+        return;
+      }
       
       // Create payment transaction
       console.log('Paying due with parameters:', {
@@ -139,6 +178,8 @@ export default function ArisanDetail() {
         dueAmount: arisan.dueAmount,
         userAddress: walletService.getState().publicKey
       });
+      console.log('CRITICAL: About to pay for round:', currentRound);
+      console.log('CRITICAL: User should NOT pay for round 1 if they already paid for it');
       
       console.log('Arisan data:', arisan);
       console.log('Current round:', currentRound);
@@ -146,8 +187,22 @@ export default function ArisanDetail() {
       console.log('Arisan members:', arisan.members);
       console.log('User address:', walletState.publicKey);
       console.log('User is member:', arisan.members.includes(walletState.publicKey));
+      
+      if (!walletState.publicKey) {
+        toast.error('Wallet address not found');
+        return;
+      }
+
+      // Additional validation: check if user is a member
+      if (!arisan.members.includes(walletState.publicKey)) {
+        toast.error('Anda bukan anggota dari grup arisan ini.');
+        return;
+      }
+
+      console.log('All validations passed, proceeding with payment...');
 
       const transaction = await sorobanUtils.payDue(
+        walletState.publicKey, // caller parameter
         arisanId,
         currentRound,
         arisan.dueAmount,
@@ -506,20 +561,30 @@ export default function ArisanDetail() {
             <CardContent className="space-y-4">
               {isMember && (
                 <div>
-                  <h3 className="text-lg font-medium mb-2">Putaran {currentRound}</h3>
+                  <h3 className="text-lg font-medium mb-2">
+                    Putaran {currentRound > arisan.roundCount ? 'Selesai' : currentRound}
+                  </h3>
                   
-                  {!paymentStatus && (
+                  {!paymentStatus && currentRound <= arisan.roundCount && (
                     <div className="mb-4">
                       <p className="text-sm text-gray-600 mb-2">
-                        Iuran yang harus dibayar: {formatCurrency(arisan.dueAmount)}
+                        Iuran yang harus dibayar untuk putaran {currentRound}: {formatCurrency(arisan.dueAmount)}
                       </p>
                       <Button
                         onClick={handlePayDue}
                         loading={isPaying}
                         className="w-full"
                       >
-                        {isPaying ? 'Memproses...' : 'Bayar Iuran'}
+                        {isPaying ? 'Memproses...' : `Bayar Iuran Putaran ${currentRound}`}
                       </Button>
+                    </div>
+                  )}
+                  
+                  {currentRound > arisan.roundCount && (
+                    <div className="mb-4">
+                      <p className="text-sm text-green-600 mb-2">
+                        ✅ Semua putaran sudah dibayar
+                      </p>
                     </div>
                   )}
 

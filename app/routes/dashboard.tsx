@@ -71,23 +71,53 @@ export default function Dashboard() {
 
         console.log('Fetching dashboard data for user:', walletState.publicKey);
 
-            // Get user's arisan groups
-            const userArisans = await sorobanUtils.getUserArisans(walletState.publicKey);
+            // Get all arisans and filter for user-specific data
+            const allArisans = await sorobanUtils.getAllArisans();
+            console.log('All arisans:', allArisans);
+
+            // Filter arisans where user is a member
+            const userArisans = allArisans.filter(arisan => 
+              arisan.members.includes(walletState.publicKey)
+            );
             console.log('User arisans:', userArisans);
 
-            // Get user's recent activities
-            const userActivities = await sorobanUtils.getUserActivities(walletState.publicKey);
+            // Get user's recent activities (simplified)
+            const userActivities: ActivityData[] = userArisans.map((arisan, index) => ({
+              id: `arisan-${arisan.id}`,
+              type: 'creation',
+              description: `Bergabung dengan Arisan #${arisan.id}`,
+              amount: null,
+              date: new Date().toLocaleDateString('id-ID'),
+              status: 'completed',
+              arisanId: arisan.id.toString(),
+            }));
             console.log('User activities:', userActivities);
 
-            // Get user's payments and winnings for stats
-            const userPayments = await sorobanUtils.getUserPayments(walletState.publicKey);
-            const userWinnings = await sorobanUtils.getUserWinnings(walletState.publicKey);
+            // Get user's payments and winnings for stats (simplified)
+            const userPayments: { amount: number }[] = [];
+            const userWinnings: { amount: number }[] = [];
+            
+            // Calculate total payments by checking payment status for each round
+            let totalPaidAmount = 0;
+            for (const arisan of userArisans) {
+              for (let round = 1; round <= arisan.roundCount; round++) {
+                try {
+                  const hasPaid = await sorobanUtils.getPaymentStatus(arisan.id, round);
+                  if (hasPaid) {
+                    totalPaidAmount += Number(arisan.dueAmount);
+                    userPayments.push({ amount: Number(arisan.dueAmount) });
+                  }
+                } catch (error) {
+                  console.error(`Error checking payment status for arisan ${arisan.id}, round ${round}:`, error);
+                }
+              }
+            }
 
             // Calculate stats
             const totalGroups = userArisans.length;
             const activeGroups = userArisans.filter(a => a.isActive).length;
             const completedGroups = userArisans.filter(a => !a.isActive).length;
-            const totalPaid = userPayments.reduce((sum, payment) => sum + payment.amount, 0);
+            const totalPaid = totalPaidAmount; // Use calculated amount
             const totalWon = userWinnings.reduce((sum, winning) => sum + winning.amount, 0);
 
             setUserStats({

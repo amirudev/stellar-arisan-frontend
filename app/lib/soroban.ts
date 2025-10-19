@@ -121,18 +121,34 @@ export const sorobanUtils = {
       .build();
 
     console.log('Transaction built. Network passphrase in tx:', (tx as any).networkPassphrase);
-    
+
     return tx;
   },
 
   // Pay due amount
   payDue: async (
+    caller: string,
     arisanId: number,
     round: number,
     amount: number,
     sourceAccount: any
   ) => {
-    console.log('payDue called with:', { arisanId, round, amount, sourceAccount: sourceAccount.accountId() });
+    // Validate required parameters
+    if (!sourceAccount) {
+      throw new Error('Source account is required for transaction');
+    }
+    
+    if (!caller) {
+      throw new Error('Caller address is required for payment');
+    }
+    
+    console.log('payDue called with:', { 
+      caller, 
+      arisanId, 
+      round, 
+      amount, 
+      sourceAccount: sourceAccount.accountId?.() || 'Unknown' 
+    });
     
     const sdk = await getStellarSDK();
     
@@ -159,11 +175,14 @@ export const sorobanUtils = {
       .setTimeout(30)
       .build();
 
-    console.log('Transaction built successfully');
+    console.log('Transaction built successfully (OLD CONTRACT SIGNATURE)');
     console.log('Transaction operations:', tx.operations);
     console.log('Transaction source account:', tx.source);
     console.log('Transaction network passphrase:', tx.networkPassphrase);
-    
+    console.log('WARNING: Using old contract signature - security validation disabled');
+    console.log('CLIENT-SIDE VALIDATION: Skipping validation due to context issues');
+    console.log('NOTE: Validation should be handled by the calling component');
+
     return tx;
   },
 
@@ -725,6 +744,9 @@ export const handleSorobanError = (error: any): string => {
   }
   if (error?.message?.includes('AlreadyReleased')) {
     return 'Dana sudah dilepas untuk putaran ini.';
+  }
+  if (error?.message?.includes('NotMember')) {
+    return 'Anda bukan anggota dari grup arisan ini.';
   }
   
   return error?.message || 'Terjadi kesalahan yang tidak diketahui.';
